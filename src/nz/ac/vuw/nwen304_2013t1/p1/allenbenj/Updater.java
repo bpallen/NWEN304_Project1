@@ -1,4 +1,4 @@
-package nz.ac.vuw.nwen304.p1.allenbenj;
+package nz.ac.vuw.nwen304_2013t1.p1.allenbenj;
 
 public class Updater extends Thread {
 
