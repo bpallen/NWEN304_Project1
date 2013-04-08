@@ -47,6 +47,7 @@ public class Trip {
 						}
 					}
 				}
+				is.close();
 			} catch (Exception e) {
 				throw new RuntimeException(e);
 			}

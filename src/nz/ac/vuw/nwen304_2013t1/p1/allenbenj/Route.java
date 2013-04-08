@@ -43,6 +43,7 @@ public class Route {
 						}
 					}
 				}
+				is.close();
 			} catch (Exception e) {
 				throw new RuntimeException(e);
 			}

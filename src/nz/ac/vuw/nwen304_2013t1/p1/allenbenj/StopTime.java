@@ -63,6 +63,7 @@ public class StopTime {
 						}
 					}
 				}
+				is.close();
 			} catch (Exception e) {
 				throw new RuntimeException(e);
 			}

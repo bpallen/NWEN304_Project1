@@ -7,6 +7,8 @@ import java.net.URLConnection;
 import vuw.nwen304.androidtest.R;
 
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
 import android.app.Activity;
 import android.view.Menu;
 import android.view.View;
@@ -22,6 +24,8 @@ public class MainActivity extends Activity implements OnItemSelectedListener {
 	Spinner spinner_route, spinner_trip;
 	ListView list_stoptimes;
 
+	Updater updater;
+
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -29,33 +33,27 @@ public class MainActivity extends Activity implements OnItemSelectedListener {
 
 		((RadioButton) findViewById(R.id.radioButton_inbound)).setSelected(true);
 
-		Route.Routes routes = null;
-
-		try {
-			URL url_routes = new URL("http://homepages.ecs.vuw.ac.nz/~allenbenj/nwen304/p1/routes.xml");
-			URL url_trips = new URL("http://homepages.ecs.vuw.ac.nz/~allenbenj/nwen304/p1/trips.xml");
-			URL url_stops = new URL("http://homepages.ecs.vuw.ac.nz/~allenbenj/nwen304/p1/stops.xml");
-			URL url_stop_times = new URL("http://homepages.ecs.vuw.ac.nz/~allenbenj/nwen304/p1/stop_times.xml");
-
-			routes = Route.parseRoutes(url_routes.openStream());
-			Trip.parseTrips(url_trips.openStream());
-			Stop.parseStops(url_stops.openStream());
-			StopTime.parseStopTimes(url_stop_times.openStream());
-
-		} catch (Exception e) {
-			// o noes
-			System.err.println(e.getClass().getName() + ": " + e.getMessage());
-		}
-
 		spinner_route = (Spinner) findViewById(R.id.spinner_route);
 		spinner_route.setOnItemSelectedListener(this);
 		spinner_trip = (Spinner) findViewById(R.id.spinner_trip);
 		spinner_trip.setOnItemSelectedListener(this);
 
-		spinner_route.setAdapter(new ArrayAdapter<Route>(this, android.R.layout.simple_spinner_item,
-				android.R.id.text1, routes.allRoutes()));
-
 		list_stoptimes = (ListView) findViewById(R.id.listView_stoptimes);
+
+		Handler h = new Handler() {
+			@Override
+			public void handleMessage(Message msg) {
+
+			}
+		};
+
+		updater = new Updater(this, h);
+		updater.start();
+	}
+
+	private void showRoutes(Route[] routes) {
+		spinner_route.setAdapter(new ArrayAdapter<Route>(this, android.R.layout.simple_spinner_item,
+				android.R.id.text1, routes));
 	}
 
 	private void showTrips(Trip[] trips) {
