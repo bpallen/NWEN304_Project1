@@ -12,15 +12,58 @@ import android.util.Xml;
 
 public class Trip {
 
-	private static final Map<Integer, Trip> trips = new HashMap<Integer, Trip>();
-	private static final Map<Integer, Set<Trip>> trips_by_routeid = new HashMap<Integer, Set<Trip>>();
+	public static class Trips {
+
+		private final Map<Integer, Trip> trips = new HashMap<Integer, Trip>();
+		private final Map<Integer, Set<Trip>> trips_by_routeid = new HashMap<Integer, Set<Trip>>();
+
+		public Trips(InputStream is) {
+			trips.clear();
+			try {
+				XmlPullParser parser = Xml.newPullParser();
+				parser.setInput(is, null);
+				Trip t = null;
+				for (int event = parser.getEventType(); event != XmlPullParser.END_DOCUMENT; event = parser.next()) {
+					switch (event) {
+					case XmlPullParser.START_TAG:
+						String name = parser.getName();
+						if (name.equalsIgnoreCase("RECORD")) {
+							t = new Trip();
+						} else if (name.equalsIgnoreCase("TRIP_ID")) {
+							t.id = Integer.parseInt(parser.nextText());
+							trips.put(t.id, t);
+						} else if (name.equalsIgnoreCase("ROUTE_ID")) {
+							t.route_id = Integer.parseInt(parser.nextText());
+							Set<Trip> rtrips = trips_by_routeid.get(t.route_id);
+							if (rtrips == null) {
+								rtrips = new HashSet<Trip>();
+								trips_by_routeid.put(t.route_id, rtrips);
+							}
+							rtrips.add(t);
+						} else if (name.equalsIgnoreCase("DIRECTION_ID")) {
+							t.direction = Integer.parseInt(parser.nextText());
+						}
+					}
+				}
+			} catch (Exception e) {
+				throw new RuntimeException(e);
+			}
+		}
+
+		public Trip tripByID(int id) {
+			return trips.get(id);
+		}
+
+		public Trip[] tripsByRouteID(int route_id) {
+			Set<Trip> trip_set = trips_by_routeid.get(route_id);
+			Trip[] trips = new Trip[trip_set.size()];
+			trip_set.toArray(trips);
+			return trips;
+		}
+	}
 
 	private int id, route_id;
 	private int direction;
-
-	static {
-		// load from cache?
-	}
 
 	private Trip() {
 
@@ -38,13 +81,13 @@ public class Trip {
 		return direction;
 	}
 
-	public Route getRoute() {
-		return Route.routeByID(route_id);
-	}
-
-	public StopTime[] getStopTimes() {
-		return StopTime.stopTimesByTripID(id);
-	}
+//	public Route getRoute() {
+//		return Route.routeByID(route_id);
+//	}
+//
+//	public StopTime[] getStopTimes() {
+//		return StopTime.stopTimesByTripID(id);
+//	}
 
 	@Override
 	public int hashCode() {
@@ -61,50 +104,8 @@ public class Trip {
 		return true;
 	}
 
-	public static void parseTrips(InputStream is) {
-		trips.clear();
-		try {
-			XmlPullParser parser = Xml.newPullParser();
-			parser.setInput(is, null);
-			Trip t = null;
-			for (int event = parser.getEventType(); event != XmlPullParser.END_DOCUMENT; event = parser.next()) {
-				switch (event) {
-				case XmlPullParser.START_TAG:
-					String name = parser.getName();
-					if (name.equalsIgnoreCase("RECORD")) {
-						t = new Trip();
-					} else if (name.equalsIgnoreCase("TRIP_ID")) {
-						t.id = Integer.parseInt(parser.nextText());
-						trips.put(t.id, t);
-					} else if (name.equalsIgnoreCase("ROUTE_ID")) {
-						t.route_id = Integer.parseInt(parser.nextText());
-						Set<Trip> rtrips = trips_by_routeid.get(t.route_id);
-						if (rtrips == null) {
-							rtrips = new HashSet<Trip>();
-							trips_by_routeid.put(t.route_id, rtrips);
-						}
-						rtrips.add(t);
-					} else if (name.equalsIgnoreCase("DIRECTION_ID")) {
-						t.direction = Integer.parseInt(parser.nextText());
-					}
-				}
-			}
-
-			// begin write to cache?
-		} catch (Exception e) {
-			throw new RuntimeException(e);
-		}
-	}
-
-	public static Trip tripByID(int id) {
-		return trips.get(id);
-	}
-
-	public static Trip[] tripsByRouteID(int route_id) {
-		Set<Trip> trip_set = trips_by_routeid.get(route_id);
-		Trip[] trips = new Trip[trip_set.size()];
-		trip_set.toArray(trips);
-		return trips;
+	public static Trips parseTrips(InputStream is) {
+		return new Trips(is);
 	}
 
 }

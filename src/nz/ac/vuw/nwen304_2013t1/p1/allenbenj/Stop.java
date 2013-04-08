@@ -14,15 +14,46 @@ import android.util.Xml;
 
 public class Stop {
 
-	private static Map<Integer, Stop> stops = new HashMap<Integer, Stop>();
+	public static class Stops {
+
+		private Map<Integer, Stop> stops = new HashMap<Integer, Stop>();
+
+		public Stops(InputStream is) {
+			try {
+				XmlPullParser parser = Xml.newPullParser();
+				parser.setInput(is, null);
+				Stop s = null;
+				for (int event = parser.getEventType(); event != XmlPullParser.END_DOCUMENT; event = parser.next()) {
+					switch (event) {
+					case XmlPullParser.START_TAG:
+						String name = parser.getName();
+						if (name.equalsIgnoreCase("RECORD")) {
+							s = new Stop();
+						} else if (name.equalsIgnoreCase("STOP_ID")) {
+							s.id = Integer.parseInt(parser.nextText());
+							stops.put(s.id, s);
+						} else if (name.equalsIgnoreCase("STOP_NAME")) {
+							s.name = parser.nextText();
+						} else if (name.equalsIgnoreCase("STOP_LAT")) {
+							s.latitude = Double.parseDouble(parser.nextText());
+						} else if (name.equalsIgnoreCase("STOP_LON")) {
+							s.longitude = Double.parseDouble(parser.nextText());
+						}
+					}
+				}
+			} catch (Exception e) {
+				throw new RuntimeException(e);
+			}
+		}
+
+		public Stop stopByID(int id) {
+			return stops.get(id);
+		}
+	}
 
 	private int id;
 	private String name;
 	private double latitude, longitude;
-
-	static {
-		// load from cache?
-	}
 
 	private Stop() {
 
@@ -81,37 +112,8 @@ public class Stop {
 		return true;
 	}
 
-	public static void parseStops(InputStream is) {
-		stops.clear();
-		try {
-			XmlPullParser parser = Xml.newPullParser();
-			parser.setInput(is, null);
-			Stop s = null;
-			for (int event = parser.getEventType(); event != XmlPullParser.END_DOCUMENT; event = parser.next()) {
-				switch (event) {
-				case XmlPullParser.START_TAG:
-					String name = parser.getName();
-					if (name.equalsIgnoreCase("RECORD")) {
-						s = new Stop();
-					} else if (name.equalsIgnoreCase("STOP_ID")) {
-						s.id = Integer.parseInt(parser.nextText());
-						stops.put(s.id, s);
-					} else if (name.equalsIgnoreCase("STOP_NAME")) {
-						s.name = parser.nextText();
-					} else if (name.equalsIgnoreCase("STOP_LAT")) {
-						s.latitude = Double.parseDouble(parser.nextText());
-					} else if (name.equalsIgnoreCase("STOP_LON")) {
-						s.longitude = Double.parseDouble(parser.nextText());
-					}
-				}
-			}
-		} catch (Exception e) {
-			throw new RuntimeException(e);
-		}
-	}
-
-	public static Stop stopByID(int id) {
-		return stops.get(id);
+	public static Stops parseStops(InputStream is) {
+		return new Stops(is);
 	}
 
 }

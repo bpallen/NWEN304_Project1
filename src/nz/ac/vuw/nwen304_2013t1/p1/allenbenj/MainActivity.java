@@ -29,13 +29,15 @@ public class MainActivity extends Activity implements OnItemSelectedListener {
 
 		((RadioButton) findViewById(R.id.radioButton_inbound)).setSelected(true);
 
+		Route.Routes routes = null;
+
 		try {
 			URL url_routes = new URL("http://homepages.ecs.vuw.ac.nz/~allenbenj/nwen304/p1/routes.xml");
 			URL url_trips = new URL("http://homepages.ecs.vuw.ac.nz/~allenbenj/nwen304/p1/trips.xml");
 			URL url_stops = new URL("http://homepages.ecs.vuw.ac.nz/~allenbenj/nwen304/p1/stops.xml");
 			URL url_stop_times = new URL("http://homepages.ecs.vuw.ac.nz/~allenbenj/nwen304/p1/stop_times.xml");
 
-			Route.parseRoutes(url_routes.openStream());
+			routes = Route.parseRoutes(url_routes.openStream());
 			Trip.parseTrips(url_trips.openStream());
 			Stop.parseStops(url_stops.openStream());
 			StopTime.parseStopTimes(url_stop_times.openStream());
@@ -51,7 +53,7 @@ public class MainActivity extends Activity implements OnItemSelectedListener {
 		spinner_trip.setOnItemSelectedListener(this);
 
 		spinner_route.setAdapter(new ArrayAdapter<Route>(this, android.R.layout.simple_spinner_item,
-				android.R.id.text1, Route.allRoutes()));
+				android.R.id.text1, routes.allRoutes()));
 
 		list_stoptimes = (ListView) findViewById(R.id.listView_stoptimes);
 	}
