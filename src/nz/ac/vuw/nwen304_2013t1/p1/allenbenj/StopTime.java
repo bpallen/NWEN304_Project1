@@ -14,6 +14,8 @@ import android.util.Xml;
 
 public class StopTime {
 
+	private static StopTimes stop_times;
+
 	public static class StopTimes {
 
 		private final Map<Integer, Set<StopTime>> stoptimes_by_tripid = new HashMap<Integer, Set<StopTime>>();
@@ -131,20 +133,32 @@ public class StopTime {
 		return dropoff_type;
 	}
 
-//	public Trip getTrip() {
-//		return Trip.tripByID(trip_id);
-//	}
-//
-//	public Route getRoute() {
-//		return getTrip().getRoute();
-//	}
-//
-//	public Stop getStop() {
-//		return Stop.stopByID(stop_id);
-//	}
+	public Trip getTrip() {
+		return Trip.tripByID(trip_id);
+	}
+
+	public Route getRoute() {
+		return getTrip().getRoute();
+	}
+
+	public Stop getStop() {
+		return Stop.stopByID(stop_id);
+	}
 
 	public static StopTimes parseStopTimes(InputStream is) {
 		return new StopTimes(is);
+	}
+
+	public static void useStopTimes(StopTimes st) {
+		stop_times = st;
+	}
+
+	public static StopTime[] stopTimesByTripID(int id) {
+		return stop_times.stopTimesByTripID(id);
+	}
+
+	public static StopTime[] stopTimesByStopID(int id) {
+		return stop_times.stopTimesByStopID(id);
 	}
 
 }

@@ -10,6 +10,8 @@ import android.util.Xml;
 
 public class Route {
 
+	private static Routes routes;
+
 	public static class Routes {
 
 		private final Map<Integer, Route> routes = new HashMap<Integer, Route>();
@@ -117,6 +119,18 @@ public class Route {
 
 	public static Routes parseRoutes(InputStream is) {
 		return new Routes(is);
+	}
+
+	public static void useRoutes(Routes r) {
+		routes = r;
+	}
+
+	public static Route routeByID(int id) {
+		return routes.routeByID(id);
+	}
+
+	public static Route[] allRoutes() {
+		return routes.allRoutes();
 	}
 
 }

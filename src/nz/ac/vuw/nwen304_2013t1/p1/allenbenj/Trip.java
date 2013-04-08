@@ -12,6 +12,8 @@ import android.util.Xml;
 
 public class Trip {
 
+	private static Trips trips;
+
 	public static class Trips {
 
 		private final Map<Integer, Trip> trips = new HashMap<Integer, Trip>();
@@ -81,13 +83,13 @@ public class Trip {
 		return direction;
 	}
 
-//	public Route getRoute() {
-//		return Route.routeByID(route_id);
-//	}
-//
-//	public StopTime[] getStopTimes() {
-//		return StopTime.stopTimesByTripID(id);
-//	}
+	public Route getRoute() {
+		return Route.routeByID(route_id);
+	}
+
+	public StopTime[] getStopTimes() {
+		return StopTime.stopTimesByTripID(id);
+	}
 
 	@Override
 	public int hashCode() {
@@ -106,6 +108,18 @@ public class Trip {
 
 	public static Trips parseTrips(InputStream is) {
 		return new Trips(is);
+	}
+
+	public static void useTrips(Trips t) {
+		trips = t;
+	}
+
+	public static Trip tripByID(int id) {
+		return trips.tripByID(id);
+	}
+
+	public static Trip[] tripsByRouteID(int id) {
+		return trips.tripsByRouteID(id);
 	}
 
 }

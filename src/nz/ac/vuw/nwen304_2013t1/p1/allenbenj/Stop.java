@@ -14,6 +14,8 @@ import android.util.Xml;
 
 public class Stop {
 
+	private static Stops stops;
+
 	public static class Stops {
 
 		private Map<Integer, Stop> stops = new HashMap<Integer, Stop>();
@@ -114,6 +116,14 @@ public class Stop {
 
 	public static Stops parseStops(InputStream is) {
 		return new Stops(is);
+	}
+
+	public static void useStops(Stops s) {
+		stops = s;
+	}
+
+	public static Stop stopByID(int id) {
+		return stops.stopByID(id);
 	}
 
 }
