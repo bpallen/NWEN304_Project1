@@ -1,8 +1,5 @@
 package nz.ac.vuw.nwen304_2013t1.p1.allenbenj;
 
-import java.io.BufferedInputStream;
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.InputStream;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -14,43 +11,54 @@ import android.util.Xml;
 
 public class Stop {
 
-	private static Stops stops;
+	private static volatile Stops stops;
 
 	public static class Stops {
 
-		private Map<Integer, Stop> stops = new HashMap<Integer, Stop>();
+		private final Map<Integer, Stop> stops;
 
-		public Stops(InputStream is) {
-			try {
-				XmlPullParser parser = Xml.newPullParser();
-				parser.setInput(is, null);
-				Stop s = null;
-				for (int event = parser.getEventType(); event != XmlPullParser.END_DOCUMENT; event = parser.next()) {
-					switch (event) {
-					case XmlPullParser.START_TAG:
-						String name = parser.getName();
-						if (name.equalsIgnoreCase("RECORD")) {
-							s = new Stop();
-						} else if (name.equalsIgnoreCase("STOP_ID")) {
-							s.id = Integer.parseInt(parser.nextText());
-							stops.put(s.id, s);
-						} else if (name.equalsIgnoreCase("STOP_NAME")) {
-							s.name = parser.nextText();
-						} else if (name.equalsIgnoreCase("STOP_LAT")) {
-							s.latitude = Double.parseDouble(parser.nextText());
-						} else if (name.equalsIgnoreCase("STOP_LON")) {
-							s.longitude = Double.parseDouble(parser.nextText());
-						}
+		public Stops() {
+			stops = new HashMap<Integer, Stop>();
+		}
+
+		public Stops(InputStream is) throws Exception {
+			stops = new HashMap<Integer, Stop>();
+			XmlPullParser parser = Xml.newPullParser();
+			parser.setInput(is, null);
+			Stop s = null;
+			for (int event = parser.getEventType(); event != XmlPullParser.END_DOCUMENT; event = parser.next()) {
+				switch (event) {
+				case XmlPullParser.START_TAG:
+					String name = parser.getName();
+					if (name.equalsIgnoreCase("RECORD")) {
+						s = new Stop();
+					} else if (name.equalsIgnoreCase("STOP_ID")) {
+						s.id = Integer.parseInt(parser.nextText());
+						stops.put(s.id, s);
+					} else if (name.equalsIgnoreCase("STOP_NAME")) {
+						s.name = parser.nextText();
+					} else if (name.equalsIgnoreCase("STOP_LAT")) {
+						s.latitude = Double.parseDouble(parser.nextText());
+					} else if (name.equalsIgnoreCase("STOP_LON")) {
+						s.longitude = Double.parseDouble(parser.nextText());
 					}
 				}
-				is.close();
-			} catch (Exception e) {
-				throw new RuntimeException(e);
 			}
+			is.close();
 		}
 
 		public Stop stopByID(int id) {
 			return stops.get(id);
+		}
+
+		/**
+		 * Add the information in the specified Stops object to this one. Is not synchronized, so must not be called if
+		 * this Stops object is accessible from mutliple threads.
+		 * 
+		 * @param s
+		 */
+		public void add(Stops s) {
+			stops.putAll(s.stops);
 		}
 	}
 
@@ -115,7 +123,7 @@ public class Stop {
 		return true;
 	}
 
-	public static Stops parseStops(InputStream is) {
+	public static Stops parseStops(InputStream is) throws Exception {
 		return new Stops(is);
 	}
 
@@ -124,6 +132,7 @@ public class Stop {
 	}
 
 	public static Stop stopByID(int id) {
+		if (stops == null) return null;
 		return stops.stopByID(id);
 	}
 

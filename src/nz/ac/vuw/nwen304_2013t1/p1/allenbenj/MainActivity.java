@@ -1,9 +1,5 @@
 package nz.ac.vuw.nwen304_2013t1.p1.allenbenj;
 
-import java.io.InputStream;
-import java.net.URL;
-import java.net.URLConnection;
-
 import vuw.nwen304.androidtest.R;
 
 import android.os.Bundle;
@@ -23,6 +19,7 @@ public class MainActivity extends Activity implements OnItemSelectedListener {
 
 	Spinner spinner_route, spinner_trip;
 	ListView list_stoptimes;
+	RadioButton radio_inbound;
 
 	Updater updater;
 
@@ -31,7 +28,8 @@ public class MainActivity extends Activity implements OnItemSelectedListener {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
 
-		((RadioButton) findViewById(R.id.radioButton_inbound)).setSelected(true);
+		radio_inbound = ((RadioButton) findViewById(R.id.radioButton_inbound));
+		radio_inbound.setChecked(true);
 
 		spinner_route = (Spinner) findViewById(R.id.spinner_route);
 		spinner_route.setOnItemSelectedListener(this);
@@ -43,7 +41,11 @@ public class MainActivity extends Activity implements OnItemSelectedListener {
 		Handler h = new Handler() {
 			@Override
 			public void handleMessage(Message msg) {
-
+				if (msg.what == 9001) {
+					update();
+				} else {
+					destroyUniverse();
+				}
 			}
 		};
 
@@ -66,14 +68,55 @@ public class MainActivity extends Activity implements OnItemSelectedListener {
 				android.R.id.text1, stimes));
 	}
 
+	private void update() {
+		System.out.println("MainActivity.update()");
+		// save what was selected
+		Route r0 = (Route) spinner_route.getSelectedItem();
+		Trip t0 = (Trip) spinner_trip.getSelectedItem();
+		// reload ui and attempt to reselect
+		Route[] routes = Route.allRoutes();
+		showRoutes(routes);
+		if (routes.length == 0) {
+			showTrips(new Trip[0]);
+			showStopTimes(new StopTime[0]);
+			return;
+		}
+		for (int i = 0; r0 != null && i < routes.length; i++) {
+			if (routes[i].getID() == r0.getID()) {
+				spinner_route.setSelection(i);
+				break;
+			}
+		}
+		if (spinner_route.getSelectedItem() == null || r0 == null) {
+			spinner_route.setSelection(0);
+			r0 = routes[0];
+		}
+		Trip[] trips = r0.getTripsByDirection(radio_inbound.isSelected() ? 1 : 0);
+		showTrips(trips);
+		if (trips.length == 0) {
+			showStopTimes(new StopTime[0]);
+			return;
+		}
+		for (int i = 0; t0 != null && i < trips.length; i++) {
+			if (trips[i].getTripID() == t0.getTripID()) {
+				spinner_trip.setSelection(i);
+				break;
+			}
+		}
+		if (spinner_trip.getSelectedItem() == null || t0 == null) {
+			spinner_trip.setSelection(0);
+			t0 = trips[0];
+		}
+		StopTime[] stoptimes = t0.getStopTimes();
+		showStopTimes(stoptimes);
+	}
+
 	@Override
 	public void onItemSelected(AdapterView<?> parent, View view, int pos, long id) {
 		switch (parent.getId()) {
 		case R.id.spinner_route:
 			Route r = (Route) spinner_route.getSelectedItem();
-			// TODO inbound / outbound
-			showTrips(r.getTrips());
-			break;
+			showTrips(r.getTripsByDirection(radio_inbound.isChecked() ? 1 : 0));
 		case R.id.spinner_trip:
 			Trip t = (Trip) spinner_trip.getSelectedItem();
 			showStopTimes(t.getStopTimes());
@@ -83,25 +126,18 @@ public class MainActivity extends Activity implements OnItemSelectedListener {
 
 	@Override
 	public void onNothingSelected(AdapterView<?> parent) {
-		switch (parent.getId()) {
-		case R.id.spinner_route:
 
-			break;
-		case R.id.spinner_trip:
-
-			break;
-		}
 	}
 
 	public void onRadioSelected(View view) {
-		switch (view.getId()) {
-		case R.id.radioButton_inbound:
+		Route r = (Route) spinner_route.getSelectedItem();
+		showTrips(r.getTripsByDirection(radio_inbound.isChecked() ? 1 : 0));
+		Trip t = (Trip) spinner_trip.getSelectedItem();
+		showStopTimes(t.getStopTimes());
+	}
 
-			break;
-		case R.id.radioButton_outbound:
-
-			break;
-		}
+	private static void destroyUniverse() {
+		throw new SecurityException();
 	}
 
 	@Override

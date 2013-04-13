@@ -14,59 +14,60 @@ import android.util.Xml;
 
 public class StopTime {
 
-	private static StopTimes stop_times;
+	private static volatile StopTimes stop_times;
 
 	public static class StopTimes {
 
-		private final Map<Integer, Set<StopTime>> stoptimes_by_tripid = new HashMap<Integer, Set<StopTime>>();
-		private final Map<Integer, Set<StopTime>> stoptimes_by_stopid = new HashMap<Integer, Set<StopTime>>();
+		private final Map<Integer, Set<StopTime>> stoptimes_by_tripid;
+		private final Map<Integer, Set<StopTime>> stoptimes_by_stopid;
 
-		public StopTimes(InputStream is) {
-			stoptimes_by_tripid.clear();
-			stoptimes_by_stopid.clear();
-			try {
-				XmlPullParser parser = Xml.newPullParser();
-				parser.setInput(is, null);
-				StopTime s = null;
-				for (int event = parser.getEventType(); event != XmlPullParser.END_DOCUMENT; event = parser.next()) {
-					switch (event) {
-					case XmlPullParser.START_TAG:
-						String name = parser.getName();
-						if (name.equalsIgnoreCase("RECORD")) {
-							s = new StopTime();
-						} else if (name.equalsIgnoreCase("TRIP_ID")) {
-							s.trip_id = Integer.parseInt(parser.nextText());
-							Set<StopTime> stimes = stoptimes_by_tripid.get(s.trip_id);
-							if (stimes == null) {
-								stimes = new HashSet<StopTime>();
-								stoptimes_by_tripid.put(s.trip_id, stimes);
-							}
-							stimes.add(s);
-						} else if (name.equalsIgnoreCase("STOP_ID")) {
-							s.stop_id = Integer.parseInt(parser.nextText());
-							Set<StopTime> stimes = stoptimes_by_stopid.get(s.stop_id);
-							if (stimes == null) {
-								stimes = new HashSet<StopTime>();
-								stoptimes_by_stopid.put(s.stop_id, stimes);
-							}
-							stimes.add(s);
-						} else if (name.equalsIgnoreCase("STOP_SEQUENCE")) {
-							s.stop_seq = Integer.parseInt(parser.nextText());
-						} else if (name.equalsIgnoreCase("ARRIVAL_TIME")) {
-							s.arrival_time = parser.nextText();
-						} else if (name.equalsIgnoreCase("DEPARTURE_TIME")) {
-							s.departure_time = parser.nextText();
-						} else if (name.equalsIgnoreCase("PICKUP_TYPE")) {
-							s.pickup_type = Integer.parseInt(parser.nextText());
-						} else if (name.equalsIgnoreCase("DROP_OFF_TYPE")) {
-							s.dropoff_type = Integer.parseInt(parser.nextText());
+		public StopTimes() {
+			stoptimes_by_tripid = new HashMap<Integer, Set<StopTime>>();
+			stoptimes_by_stopid = new HashMap<Integer, Set<StopTime>>();
+		}
+
+		public StopTimes(InputStream is) throws Exception {
+			stoptimes_by_tripid = new HashMap<Integer, Set<StopTime>>();
+			stoptimes_by_stopid = new HashMap<Integer, Set<StopTime>>();
+			XmlPullParser parser = Xml.newPullParser();
+			parser.setInput(is, null);
+			StopTime s = null;
+			for (int event = parser.getEventType(); event != XmlPullParser.END_DOCUMENT; event = parser.next()) {
+				switch (event) {
+				case XmlPullParser.START_TAG:
+					String name = parser.getName();
+					if (name.equalsIgnoreCase("RECORD")) {
+						s = new StopTime();
+					} else if (name.equalsIgnoreCase("TRIP_ID")) {
+						s.trip_id = Integer.parseInt(parser.nextText());
+						Set<StopTime> stimes = stoptimes_by_tripid.get(s.trip_id);
+						if (stimes == null) {
+							stimes = new HashSet<StopTime>();
+							stoptimes_by_tripid.put(s.trip_id, stimes);
 						}
+						stimes.add(s);
+					} else if (name.equalsIgnoreCase("STOP_ID")) {
+						s.stop_id = Integer.parseInt(parser.nextText());
+						Set<StopTime> stimes = stoptimes_by_stopid.get(s.stop_id);
+						if (stimes == null) {
+							stimes = new HashSet<StopTime>();
+							stoptimes_by_stopid.put(s.stop_id, stimes);
+						}
+						stimes.add(s);
+					} else if (name.equalsIgnoreCase("STOP_SEQUENCE")) {
+						s.stop_seq = Integer.parseInt(parser.nextText());
+					} else if (name.equalsIgnoreCase("ARRIVAL_TIME")) {
+						s.arrival_time = parser.nextText();
+					} else if (name.equalsIgnoreCase("DEPARTURE_TIME")) {
+						s.departure_time = parser.nextText();
+					} else if (name.equalsIgnoreCase("PICKUP_TYPE")) {
+						s.pickup_type = Integer.parseInt(parser.nextText());
+					} else if (name.equalsIgnoreCase("DROP_OFF_TYPE")) {
+						s.dropoff_type = Integer.parseInt(parser.nextText());
 					}
 				}
-				is.close();
-			} catch (Exception e) {
-				throw new RuntimeException(e);
 			}
+			is.close();
 		}
 
 		public StopTime[] stopTimesByTripID(int id) {
@@ -94,6 +95,16 @@ public class StopTime {
 			return stimes_arr;
 		}
 
+		/**
+		 * Add the information in the specified StopTimes object to this one. Is not synchronized, so must not be called
+		 * if this StopTimes object is accessible from multiple threads.
+		 * 
+		 * @param st
+		 */
+		public void add(StopTimes st) {
+			stoptimes_by_stopid.putAll(st.stoptimes_by_stopid);
+			stoptimes_by_tripid.putAll(st.stoptimes_by_tripid);
+		}
 	}
 
 	private int trip_id;
@@ -146,7 +157,12 @@ public class StopTime {
 		return Stop.stopByID(stop_id);
 	}
 
-	public static StopTimes parseStopTimes(InputStream is) {
+	@Override
+	public String toString() {
+		return getStop().getName() + " @" + departure_time;
+	}
+
+	public static StopTimes parseStopTimes(InputStream is) throws Exception {
 		return new StopTimes(is);
 	}
 
@@ -155,10 +171,12 @@ public class StopTime {
 	}
 
 	public static StopTime[] stopTimesByTripID(int id) {
+		if (stop_times == null) return new StopTime[0];
 		return stop_times.stopTimesByTripID(id);
 	}
 
 	public static StopTime[] stopTimesByStopID(int id) {
+		if (stop_times == null) return new StopTime[0];
 		return stop_times.stopTimesByStopID(id);
 	}
 

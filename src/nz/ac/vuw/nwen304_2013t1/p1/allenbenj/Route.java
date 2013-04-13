@@ -10,43 +10,44 @@ import android.util.Xml;
 
 public class Route {
 
-	private static Routes routes;
+	private static volatile Routes routes;
 
 	public static class Routes {
 
-		private final Map<Integer, Route> routes = new HashMap<Integer, Route>();
+		private final Map<Integer, Route> routes;
 
-		public Routes(InputStream is) {
-			try {
-				XmlPullParser parser = Xml.newPullParser();
-				parser.setInput(is, null);
-				Route r = null;
-				for (int event = parser.getEventType(); event != XmlPullParser.END_DOCUMENT; event = parser.next()) {
-					switch (event) {
-					case XmlPullParser.START_TAG:
-						String name = parser.getName();
-						if (name.equalsIgnoreCase("RECORD")) {
-							r = new Route();
-						} else if (name.equalsIgnoreCase("ROUTE_ID")) {
-							r.id = Integer.parseInt(parser.nextText());
-							routes.put(r.id, r);
-						} else if (name.equalsIgnoreCase("AGENCY_ID")) {
-							r.agency = parser.nextText();
-						} else if (name.equalsIgnoreCase("ROUTE_SHORT_NAME")) {
-							r.short_name = parser.nextText();
-						} else if (name.equalsIgnoreCase("ROUTE_LONG_NAME")) {
-							r.long_name = parser.nextText();
-						} else if (name.equalsIgnoreCase("ROUTE_DESC")) {
-							r.description = parser.nextText();
-						} else if (name.equalsIgnoreCase("ROUTE_TYPE")) {
-							r.type = Integer.parseInt(parser.nextText());
-						}
+		public Routes() {
+			routes = new HashMap<Integer, Route>();
+		}
+
+		public Routes(InputStream is) throws Exception {
+			routes = new HashMap<Integer, Route>();
+			XmlPullParser parser = Xml.newPullParser();
+			parser.setInput(is, null);
+			Route r = null;
+			for (int event = parser.getEventType(); event != XmlPullParser.END_DOCUMENT; event = parser.next()) {
+				switch (event) {
+				case XmlPullParser.START_TAG:
+					String name = parser.getName();
+					if (name.equalsIgnoreCase("RECORD")) {
+						r = new Route();
+					} else if (name.equalsIgnoreCase("ROUTE_ID")) {
+						r.id = Integer.parseInt(parser.nextText());
+						routes.put(r.id, r);
+					} else if (name.equalsIgnoreCase("AGENCY_ID")) {
+						r.agency = parser.nextText();
+					} else if (name.equalsIgnoreCase("ROUTE_SHORT_NAME")) {
+						r.short_name = parser.nextText();
+					} else if (name.equalsIgnoreCase("ROUTE_LONG_NAME")) {
+						r.long_name = parser.nextText();
+					} else if (name.equalsIgnoreCase("ROUTE_DESC")) {
+						r.description = parser.nextText();
+					} else if (name.equalsIgnoreCase("ROUTE_TYPE")) {
+						r.type = Integer.parseInt(parser.nextText());
 					}
 				}
-				is.close();
-			} catch (Exception e) {
-				throw new RuntimeException(e);
 			}
+			is.close();
 		}
 
 		public Route routeByID(int id) {
@@ -57,6 +58,16 @@ public class Route {
 			Route[] routes_arr = new Route[routes.size()];
 			routes.values().toArray(routes_arr);
 			return routes_arr;
+		}
+
+		/**
+		 * Add the information in the specified Routes object to this one. Is not synchronized, so must not be called if
+		 * this Routes object is accessible from mutliple threads.
+		 * 
+		 * @param r
+		 */
+		public void add(Routes r) {
+			routes.putAll(r.routes);
 		}
 	}
 
@@ -98,6 +109,10 @@ public class Route {
 		return Trip.tripsByRouteID(id);
 	}
 
+	public Trip[] getTripsByDirection(int dir) {
+		return Trip.tripsByRouteIDAndDirection(id, dir);
+	}
+
 	@Override
 	public String toString() {
 		return "[" + id + "] " + long_name;
@@ -118,7 +133,7 @@ public class Route {
 		return true;
 	}
 
-	public static Routes parseRoutes(InputStream is) {
+	public static Routes parseRoutes(InputStream is) throws Exception {
 		return new Routes(is);
 	}
 
@@ -127,10 +142,12 @@ public class Route {
 	}
 
 	public static Route routeByID(int id) {
+		if (routes == null) return null;
 		return routes.routeByID(id);
 	}
 
 	public static Route[] allRoutes() {
+		if (routes == null) return new Route[0];
 		return routes.allRoutes();
 	}
 
