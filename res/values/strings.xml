@@ -6,5 +6,7 @@
     <string name="label_routes">Bus Routes</string>
     <string name="inbound">Inbound</string>
     <string name="outbound">Outbound</string>
+    <string name="go">Go</string>
+    <string name="update">Update</string>
 
 </resources>

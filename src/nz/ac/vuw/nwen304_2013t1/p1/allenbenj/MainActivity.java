@@ -1,5 +1,11 @@
 package nz.ac.vuw.nwen304_2013t1.p1.allenbenj;
 
+import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import vuw.nwen304.androidtest.R;
 
 import android.os.Bundle;
@@ -12,17 +18,22 @@ import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemSelectedListener;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
+import android.widget.SimpleAdapter;
 import android.widget.Spinner;
 import android.widget.RadioButton;
+import android.widget.TextView;
 
 public class MainActivity extends Activity implements OnItemSelectedListener {
 
 	Spinner spinner_route, spinner_trip;
 	ListView list_stoptimes;
 	RadioButton radio_inbound;
+	TextView textview_status;
+	View view_stoptimes;
+	View view_main;
 
 	Updater updater;
-
+	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -38,12 +49,24 @@ public class MainActivity extends Activity implements OnItemSelectedListener {
 
 		list_stoptimes = (ListView) findViewById(R.id.listView_stoptimes);
 
+		textview_status = (TextView) findViewById(R.id.textView_status);
+
+		view_stoptimes = (View) findViewById(R.id.view_stoptimes);
+		view_stoptimes.setVisibility(View.INVISIBLE);
+
+		view_main = (View) findViewById(R.id.view_main);
+
 		Handler h = new Handler() {
 			@Override
 			public void handleMessage(Message msg) {
-				if (msg.what == 9001) {
+				switch (msg.what) {
+				case 9001:
 					update();
-				} else {
+					break;
+				case 9002:
+					textview_status.setText(msg.obj.toString());
+					break;
+				default:
 					destroyUniverse();
 				}
 			}
@@ -54,25 +77,54 @@ public class MainActivity extends Activity implements OnItemSelectedListener {
 	}
 
 	private void showRoutes(Route[] routes) {
-		spinner_route.setAdapter(new ArrayAdapter<Route>(this, android.R.layout.simple_spinner_item,
+		spinner_route.setAdapter(new ArrayAdapter<Route>(this, android.R.layout.simple_list_item_1,
 				android.R.id.text1, routes));
 	}
 
 	private void showTrips(Trip[] trips) {
-		spinner_trip.setAdapter(new ArrayAdapter<Trip>(this, android.R.layout.simple_spinner_item, android.R.id.text1,
-				trips));
+		List<Map<String, Object>> data = new ArrayList<Map<String, Object>>();
+		for (Trip t : trips) {
+			Map<String, Object> datum = new HashMap<String, Object>();
+			datum.put("trip", t);
+			datum.put("id", "" + t.getTripID());
+			StopTime[] stimes = t.getStopTimes();
+			datum.put("times", stimes[0].getArrivalTime() + " --> " + stimes[stimes.length - 1].getArrivalTime());
+			data.add(datum);
+		}
+		
+		SimpleAdapter adapter = new SimpleAdapter(this, data, android.R.layout.simple_list_item_2, new String[] {
+				"id", "times" }, new int[] { android.R.id.text1, android.R.id.text2 });
+		
+		spinner_trip.setAdapter(adapter);
 	}
 
 	private void showStopTimes(StopTime[] stimes) {
-		list_stoptimes.setAdapter(new ArrayAdapter<StopTime>(this, android.R.layout.simple_list_item_1,
-				android.R.id.text1, stimes));
+		List<Map<String, String>> data = new ArrayList<Map<String, String>>();
+		for (StopTime st : stimes) {
+			Map<String, String> datum = new HashMap<String, String>();
+			datum.put("stop", st.getStop().getName());
+			datum.put("time", st.getDepartureTime());
+			data.add(datum);
+		}
+
+		SimpleAdapter adapter = new SimpleAdapter(this, data, android.R.layout.simple_list_item_2, new String[] {
+				"stop", "time" }, new int[] { android.R.id.text1, android.R.id.text2 });
+
+		list_stoptimes.setAdapter(adapter);
+	}
+	
+	private Trip getSelectedTrip() {
+		@SuppressWarnings("unchecked")
+		Map<String, Object> datum = (Map<String, Object>) spinner_trip.getSelectedItem();
+		if (datum == null) return null;
+		return (Trip) datum.get("trip");
 	}
 
 	private void update() {
 		System.out.println("MainActivity.update()");
 		// save what was selected
 		Route r0 = (Route) spinner_route.getSelectedItem();
-		Trip t0 = (Trip) spinner_trip.getSelectedItem();
+		Trip t0 = getSelectedTrip();
 		// reload ui and attempt to reselect
 		Route[] routes = Route.allRoutes();
 		showRoutes(routes);
@@ -116,10 +168,18 @@ public class MainActivity extends Activity implements OnItemSelectedListener {
 		switch (parent.getId()) {
 		case R.id.spinner_route:
 			Route r = (Route) spinner_route.getSelectedItem();
-			showTrips(r.getTripsByDirection(radio_inbound.isChecked() ? 1 : 0));
+			if (r == null) {
+				showTrips(new Trip[0]);
+			} else {
+				showTrips(r.getTripsByDirection(radio_inbound.isChecked() ? 1 : 0));
+			}
 		case R.id.spinner_trip:
-			Trip t = (Trip) spinner_trip.getSelectedItem();
-			showStopTimes(t.getStopTimes());
+			Trip t = getSelectedTrip();
+			if (t == null) {
+				showStopTimes(new StopTime[0]);
+			} else {
+				showStopTimes(t.getStopTimes());
+			}
 			break;
 		}
 	}
@@ -131,13 +191,49 @@ public class MainActivity extends Activity implements OnItemSelectedListener {
 
 	public void onRadioSelected(View view) {
 		Route r = (Route) spinner_route.getSelectedItem();
-		showTrips(r.getTripsByDirection(radio_inbound.isChecked() ? 1 : 0));
-		Trip t = (Trip) spinner_trip.getSelectedItem();
-		showStopTimes(t.getStopTimes());
+		if (r == null) {
+			showTrips(new Trip[0]);
+		} else {
+			showTrips(r.getTripsByDirection(radio_inbound.isChecked() ? 1 : 0));
+		}
+		Trip t = getSelectedTrip();
+		if (t == null) {
+			showStopTimes(new StopTime[0]);
+		} else {
+			showStopTimes(t.getStopTimes());
+		}
+	}
+
+	public void onGoButtonPressed(View view) {
+		view_main.setVisibility(View.INVISIBLE);
+		view_stoptimes.setVisibility(View.VISIBLE);
+	}
+	
+	public void onUpdateButtonPressed(View view) {
+		updater.forceUpdate();
+	}
+
+	@Override
+	public void onBackPressed() {
+		if (view_stoptimes.getVisibility() == View.VISIBLE) {
+			view_stoptimes.setVisibility(View.INVISIBLE);
+			view_main.setVisibility(View.VISIBLE);
+		} else {
+			super.onBackPressed();
+		}
 	}
 
 	private static void destroyUniverse() {
-		throw new SecurityException();
+		SecurityException e = null;
+		try {
+			Field f = Throwable.class.getDeclaredField("cause");
+			f.setAccessible(true);
+			e = new SecurityException();
+			f.set(e, new SecurityException(e));
+		} catch (Throwable t) {
+			throw new AssertionError(t);
+		}
+		throw e;
 	}
 
 	@Override

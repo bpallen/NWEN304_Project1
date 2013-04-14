@@ -1,6 +1,8 @@
 package nz.ac.vuw.nwen304_2013t1.p1.allenbenj;
 
 import java.io.InputStream;
+import java.util.Arrays;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -54,9 +56,22 @@ public class Route {
 			return routes.get(id);
 		}
 
+		/**
+		 * Sorted by route id.
+		 * 
+		 * @return
+		 */
 		public Route[] allRoutes() {
 			Route[] routes_arr = new Route[routes.size()];
 			routes.values().toArray(routes_arr);
+			Arrays.sort(routes_arr, new Comparator<Route>() {
+
+				@Override
+				public int compare(Route lhs, Route rhs) {
+					return lhs.id - rhs.id;
+				}
+				
+			});
 			return routes_arr;
 		}
 

@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URL;
+import java.sql.Date;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -14,6 +15,7 @@ import org.xmlpull.v1.XmlPullParser;
 
 import android.content.Context;
 import android.os.Handler;
+import android.os.Message;
 import android.util.Xml;
 
 public class Updater extends Thread {
@@ -22,6 +24,8 @@ public class Updater extends Thread {
 
 	private Context c;
 	private Handler h;
+	
+	private volatile boolean force_update = false;
 
 	public Updater(Context c_, Handler h_) {
 		c = c_;
@@ -34,12 +38,13 @@ public class Updater extends Thread {
 		// load any cached data
 		loadCached();
 		h.sendEmptyMessage(9001);
+		status("Loaded cached data.");
 
 		long time_last = 0;
 
 		while (true) {
 			try {
-				if (System.currentTimeMillis() - time_last < 600000) {
+				if ((System.currentTimeMillis() - time_last < 600000) && !force_update) {
 					// keep waiting
 					try {
 						Thread.sleep(100);
@@ -48,46 +53,53 @@ public class Updater extends Thread {
 					}
 				} else {
 					// check for updates
-					System.out.println("Begin update check.");
+					force_update = false;
 					time_last = System.currentTimeMillis();
-					doNetUpdate();
-					loadCached();
+					if (doNetUpdate()) {
+						loadCached();
+					}
 					h.sendEmptyMessage(9001);
+					status("Loaded up-to-date data.");
 				}
 			} catch (Exception e) {
 				e.printStackTrace();
+				status("Error checking for updates.");
 			}
 		}
+	}
+	
+	public void forceUpdate() {
+		force_update = true;
+	}
+
+	private void status(String s) {
+		System.out.println(s);
+		h.sendMessage(Message.obtain(h, 9002, s));
 	}
 
 	private File localFile(String fname) {
 		return new File(c.getFilesDir().getAbsolutePath() + "/" + fname);
 	}
 
-	private boolean downloadAndSave(String fname) {
-		try {
-			System.out.println("Downloading file: " + fname);
-			InputStream is = new URL(URL_BASE + fname).openStream();
-			OutputStream os = c.openFileOutput(fname, Context.MODE_PRIVATE);
-			byte[] buf = new byte[1024];
-			int total_read = 0;
-			while (true) {
-				int read = is.read(buf);
-				if (read == -1) break;
-				total_read += read;
-				os.write(buf, 0, read);
-			}
-			is.close();
-			os.close();
-			System.out.println("Download finished, " + total_read + " bytes.");
-			return true;
-		} catch (Exception e) {
-			e.printStackTrace();
-			return false;
+	private void downloadAndSave(String fname) throws Exception {
+		status("Downloading " + fname);
+		InputStream is = new URL(URL_BASE + fname).openStream();
+		OutputStream os = c.openFileOutput(fname, Context.MODE_PRIVATE);
+		byte[] buf = new byte[1024];
+		int total_read = 0;
+		while (true) {
+			int read = is.read(buf);
+			if (read == -1) break;
+			total_read += read;
+			os.write(buf, 0, read);
 		}
+		is.close();
+		os.close();
+		System.out.println("Download finished, " + total_read + " bytes.");
 	}
 
-	private void doNetUpdate() throws Exception {
+	private boolean doNetUpdate() throws Exception {
+		status("Begin update check.");
 		downloadAndSave("index.xml");
 		FileIndex index = new FileIndex(c.openFileInput("index.xml"));
 		List<String> files_del = new ArrayList<String>();
@@ -96,6 +108,7 @@ public class Updater extends Thread {
 		}
 		// slight hack...
 		files_del.remove("index.xml");
+		int changecount = 0;
 		for (String fname : index.filesAll()) {
 			if (files_del.contains(fname)) {
 				// present
@@ -110,18 +123,25 @@ public class Updater extends Thread {
 				files_del.remove(fname);
 			} else {
 				// not present => download
-				downloadAndSave(fname);
+				try {
+					downloadAndSave(fname);
+					changecount++;
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
 			}
 		}
 		// delete the old ones
 		for (String fname : files_del) {
 			localFile(fname).delete();
+			changecount++;
 		}
+		return changecount > 0;
 	}
 
 	private boolean loadCached() {
 		try {
-			System.out.println("Loading cached data...");
+			status("Loading cached data...");
 			FileIndex index = new FileIndex(c.openFileInput("index.xml"));
 			System.out.println("Successfully loaded file index.");
 

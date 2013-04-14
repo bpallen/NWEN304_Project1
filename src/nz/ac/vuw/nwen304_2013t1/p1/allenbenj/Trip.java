@@ -63,6 +63,7 @@ public class Trip {
 
 		public Trip[] tripsByRouteID(int route_id) {
 			Set<Trip> trip_set = trips_by_routeid.get(route_id);
+			if (trip_set == null) return new Trip[0];
 			Trip[] trips = new Trip[trip_set.size()];
 			trip_set.toArray(trips);
 			return trips;
@@ -70,6 +71,7 @@ public class Trip {
 
 		public Trip[] tripsByRouteIDAndDirection(int route_id, int dir) {
 			Set<Trip> trip_set = trips_by_routeid.get(route_id);
+			if (trip_set == null) return new Trip[0];
 			List<Trip> trips0 = new ArrayList<Trip>();
 			for (Trip t : trip_set) {
 				if (t.getDirection() == dir) {
@@ -130,9 +132,10 @@ public class Trip {
 
 	@Override
 	public String toString() {
-		return "" + id;
+		StopTime[] st = getStopTimes();
+		return "[" + id + "] " + st[0].getArrivalTime() + " --> " + st[st.length - 1].getArrivalTime();
 	}
-	
+
 	@Override
 	public int hashCode() {
 		return id;
