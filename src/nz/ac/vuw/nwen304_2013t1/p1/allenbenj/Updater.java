@@ -4,7 +4,6 @@ import java.io.File;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URL;
-import java.sql.Date;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -100,6 +99,7 @@ public class Updater extends Thread {
 
 	private boolean doNetUpdate() throws Exception {
 		status("Begin update check.");
+		// TODO some kind of lastmodified check on index.xml
 		downloadAndSave("index.xml");
 		FileIndex index = new FileIndex(c.openFileInput("index.xml"));
 		List<String> files_del = new ArrayList<String>();
